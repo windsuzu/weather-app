@@ -1,12 +1,15 @@
-import React, { useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import styled from "@emotion/styled";
 import { ReactComponent as CloudyIcon } from "./images/day-cloudy.svg";
 import { ReactComponent as AirFlowIcon } from "./images/airFlow.svg";
 import { ReactComponent as RainIcon } from "./images/rain.svg";
 import { ReactComponent as RedoIcon } from "./images/refresh.svg";
 
-const DATA_URL =
+const WEATHER_CURRENT_URL =
   "https://opendata.cwb.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=CWB-A7DF6610-3FB6-4C69-A6E2-8F99181433FE&locationName=臺北";
+
+const WEATHER_FORECAST_URL =
+  "https://opendata.cwb.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=CWB-A7DF6610-3FB6-4C69-A6E2-8F99181433FE&locationName=臺北市";
 
 const Container = styled.div`
   background-color: #ededed;
@@ -112,65 +115,110 @@ const beautifyDate = (dateStr) => {
 };
 
 const WeatherApp = () => {
-  const [currentWeather, setCurrentWeather] = useState({
-    observationTime: "2019-10-02 22:10:00",
-    locationName: "臺北市",
-    description: "多雲時晴",
-    temperature: 27.5,
-    windSpeed: 0.3,
-    humid: 0.88,
+  const [weatherElement, setWeatherElement] = useState({
+    observationTime: new Date(),
+    locationName: "",
+    humid: 0,
+    temperature: 0,
+    windSpeed: 0,
+    description: "",
+    weatherCode: 0,
+    rainPossibility: 0,
+    comfortability: "",
   });
 
-  const refreshData = () => {
-    fetch(DATA_URL)
-      .then((response) => response.json())
-      .then((data) => {
-        const locationData = data.records.location[0];
-        const weatherElements = locationData.weatherElement.reduce(
-          (dict, obj) => {
-            // weatherElement: Array(21)
-            //     0: {elementName: 'ELEV', elementValue: '6.2550'}
-            //     1: {elementName: 'WDIR', elementValue: '100'}
-            //     ...
-            if (["WDSD", "TEMP", "HUMD"].includes(obj.elementName)) {
-              dict[obj.elementName] = obj.elementValue;
-            }
-            return dict;
-          }
-        );
-
-        setCurrentWeather({
-          observationTime: locationData.time.obsTime,
-          locationName: locationData.locationName,
-          description: "多雲時晴",
-          temperature: weatherElements.TEMP,
-          windSpeed: weatherElements.WDSD,
-          humid: weatherElements.HUMD,
-        });
+  const fetchData = useCallback(() => {
+    (async () => {
+      const [weatherCurrent, weatherForecast] = await Promise.all([
+        fetchCurrentWeather(),
+        fetchWeatherForecast(),
+      ]);
+      setWeatherElement({
+        ...weatherCurrent,
+        ...weatherForecast,
       });
+    })();
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const fetchCurrentWeather = async () => {
+    const response = await fetch(WEATHER_CURRENT_URL);
+    const data = await response.json();
+    const locationData = data.records.location[0];
+    const weatherElements = locationData.weatherElement.reduce((dict, obj) => {
+      // weatherElement: Array(21)
+      //     0: {elementName: 'ELEV', elementValue: '6.2550'}
+      //     1: {elementName: 'WDIR', elementValue: '100'}
+      //     ...
+      if (["WDSD", "TEMP", "HUMD"].includes(obj.elementName)) {
+        dict[obj.elementName] = obj.elementValue;
+      }
+      return dict;
+    });
+    return {
+      observationTime: locationData.time.obsTime,
+      locationName: locationData.locationName,
+      temperature: weatherElements.TEMP,
+      windSpeed: weatherElements.WDSD,
+      humid: weatherElements.HUMD,
+    };
+  };
+
+  const fetchWeatherForecast = async () => {
+    const response = await fetch(WEATHER_FORECAST_URL);
+    const data = await response.json();
+    const locationData = data.records.location[0];
+    const weatherElements = locationData.weatherElement.reduce((dict, obj) => {
+      //     weatherElement: [
+      //       {
+      //         elementName: 'Wx',
+      //         time: [
+      //           {
+      //             parameter: {
+      //               parameterName: '晴時多雲',
+      //               parameterValue: '2',
+      //             },
+      //           },
+      //           // ...
+      if (["PoP", "CI", "Wx"].includes(obj.elementName)) {
+        dict[obj.elementName] = obj.time[0].parameter;
+      }
+      return dict;
+    }, {});
+    return {
+      description: weatherElements.Wx.parameterName,
+      weatherCode: weatherElements.Wx.parameterValue,
+      rainPossibility: weatherElements.PoP.parameterName,
+      comfortability: weatherElements.CI.parameterName,
+    };
   };
 
   return (
     <Container>
       <WeatherCard>
-        <Location>{currentWeather.locationName}</Location>
-        <Description>{currentWeather.description}</Description>
+        <Location>{weatherElement.locationName}</Location>
+        <Description>
+          {weatherElement.description} {weatherElement.comfortability}
+        </Description>
         <CurrentWeather>
           <Temperature>
-            {Math.round(currentWeather.temperature)} <Celsius>°C</Celsius>
+            {Math.round(weatherElement.temperature)} <Celsius>°C</Celsius>
           </Temperature>
           <Cloudy />
         </CurrentWeather>
         <AirFlow>
           <AirFlowIcon />
-          {currentWeather.windSpeed} m/h
+          {weatherElement.windSpeed} m/h
         </AirFlow>
         <Rain>
           <RainIcon />
-          {Math.round(currentWeather.humid * 100)} %
+          {Math.round(weatherElement.rainPossibility)} %
         </Rain>
-        <Redo onClick={refreshData}>
-          最後觀測時間：{beautifyDate(currentWeather.observationTime)}
+        <Redo onClick={fetchData}>
+          最後觀測時間：{beautifyDate(weatherElement.observationTime)}
           <RedoIcon />
         </Redo>
       </WeatherCard>
