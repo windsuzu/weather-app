@@ -1,7 +1,8 @@
 {
   "files": {
     "main.css": "/weather-app/static/css/main.a1efdb35.css",
-    "main.js": "/weather-app/static/js/main.b075e73d.js",
+    "main.js": "/weather-app/static/js/main.e9e9b063.js",
+    "service-worker.js": "/weather-app/service-worker.js",
     "static/media/day-snowing.svg": "/weather-app/static/media/day-snowing.ba1cbc7669611ee425e874e171d02e70.svg",
     "static/media/night-snowing.svg": "/weather-app/static/media/night-snowing.f00de84c0d9bed3a871ecc6fdd79f1ca.svg",
     "static/media/day-thunderstorm.svg": "/weather-app/static/media/day-thunderstorm.c1e5aabc2d813feeb2e535cff2b025ee.svg",
@@ -19,14 +20,14 @@
     "static/media/day-clear.svg": "/weather-app/static/media/day-clear.8857a9c17ded7f694ed227635f2939fa.svg",
     "static/media/refresh.svg": "/weather-app/static/media/refresh.e352fc8bae35a5d76241e0bd9ec1d4c5.svg",
     "static/media/airFlow.svg": "/weather-app/static/media/airFlow.93b49bb5f452a711b4783afb6e683672.svg",
+    "index.html": "/weather-app/index.html",
     "static/media/loading.svg": "/weather-app/static/media/loading.f8d56fd58925a1aaab4f80f1d8865c03.svg",
     "static/media/night-clear.svg": "/weather-app/static/media/night-clear.94eb7d671bc6d4dec6aa0b47038954df.svg",
-    "index.html": "/weather-app/index.html",
     "main.a1efdb35.css.map": "/weather-app/static/css/main.a1efdb35.css.map",
-    "main.b075e73d.js.map": "/weather-app/static/js/main.b075e73d.js.map"
+    "main.e9e9b063.js.map": "/weather-app/static/js/main.e9e9b063.js.map"
   },
   "entrypoints": [
     "static/css/main.a1efdb35.css",
-    "static/js/main.b075e73d.js"
+    "static/js/main.e9e9b063.js"
   ]
 }
