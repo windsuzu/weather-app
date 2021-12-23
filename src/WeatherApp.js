@@ -1,9 +1,11 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import styled from "@emotion/styled";
 import { ThemeProvider } from "@emotion/react";
 import sunriseAndSunsetData from "./sunrise-sunset.json";
 import WeatherCard from "./WeatherCard";
 import useWeatherApi from "./useWeatherApi";
+import WeatherSetting from "./WeatherSetting";
+import { findLocation } from "./utils";
 
 const theme = {
   light: {
@@ -60,12 +62,16 @@ const getMoment = (locationName) => {
 };
 
 const WeatherApp = () => {
+  const [currentCity, setCurrentCity] = useState("臺北市");
+  const currentLocation = findLocation(currentCity) || {};
+
+  const [weatherElement, fetchData] = useWeatherApi(currentLocation);
   const [currentTheme, setCurrentTheme] = useState("light");
-  const [weatherElement, fetchData] = useWeatherApi();
+  const [currentPage, setCurrentPage] = useState("WeatherCard");
 
   const currentMoment = useMemo(() => {
-    return getMoment(weatherElement.locationName);
-  }, [weatherElement.locationName]);
+    return getMoment(currentLocation.sunriseCityName);
+  }, [currentLocation.sunriseCityName]);
 
   useEffect(
     () => setCurrentTheme(currentMoment === "day" ? "light" : "dark"),
@@ -75,11 +81,22 @@ const WeatherApp = () => {
   return (
     <ThemeProvider theme={theme[currentTheme]}>
       <Container>
-        <WeatherCard
-          weatherElement={weatherElement}
-          currentMoment={currentMoment}
-          fetchData={fetchData}
-        />
+        {currentPage === "WeatherCard" && (
+          <WeatherCard
+            cityName={currentLocation.cityName}
+            weatherElement={weatherElement}
+            currentMoment={currentMoment}
+            fetchData={fetchData}
+            setCurrentPage={setCurrentPage}
+          />
+        )}
+        {currentPage === "WeatherSetting" && (
+          <WeatherSetting
+            setCurrentPage={setCurrentPage}
+            setCurrentCity={setCurrentCity}
+            cityName={currentLocation.cityName}
+          />
+        )}
       </Container>
     </ThemeProvider>
   );

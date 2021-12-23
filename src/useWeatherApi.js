@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
 
-const WEATHER_CURRENT_URL =
-  "https://opendata.cwb.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=CWB-A7DF6610-3FB6-4C69-A6E2-8F99181433FE&locationName=臺北";
+const WEATHER_CURRENT_URL = (locationName) =>
+  `https://opendata.cwb.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=${process.env.REACT_APP_WEATHER_API_KEY}&locationName=${locationName}`;
 
-const WEATHER_FORECAST_URL =
-  "https://opendata.cwb.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=CWB-A7DF6610-3FB6-4C69-A6E2-8F99181433FE&locationName=臺北市";
+const WEATHER_FORECAST_URL = (cityName) =>
+  `https://opendata.cwb.gov.tw/api/v1/rest/datastore/F-C0032-001?Authorization=${process.env.REACT_APP_WEATHER_API_KEY}&locationName=${cityName}`;
 
-const useWeatherApi = () => {
+const useWeatherApi = (currentLocation) => {
+  const { locationName, cityName } = currentLocation;
+
   const [weatherElement, setWeatherElement] = useState({
     observationTime: new Date(),
     locationName: "",
@@ -25,8 +27,8 @@ const useWeatherApi = () => {
 
     (async () => {
       const [weatherCurrent, weatherForecast] = await Promise.all([
-        fetchCurrentWeather(),
-        fetchWeatherForecast(),
+        fetchCurrentWeather(locationName),
+        fetchWeatherForecast(cityName),
       ]);
       setWeatherElement({
         ...weatherCurrent,
@@ -34,7 +36,7 @@ const useWeatherApi = () => {
         isLoading: false,
       });
     })();
-  }, []);
+  }, [locationName, cityName]);
 
   useEffect(() => {
     fetchData();
@@ -43,8 +45,8 @@ const useWeatherApi = () => {
   return [weatherElement, fetchData];
 };
 
-const fetchCurrentWeather = async () => {
-  const response = await fetch(WEATHER_CURRENT_URL);
+const fetchCurrentWeather = async (locationName) => {
+  const response = await fetch(WEATHER_CURRENT_URL(locationName));
   const data = await response.json();
   const locationData = data.records.location[0];
   const weatherElements = locationData.weatherElement.reduce((dict, obj) => {
@@ -66,8 +68,8 @@ const fetchCurrentWeather = async () => {
   };
 };
 
-const fetchWeatherForecast = async () => {
-  const response = await fetch(WEATHER_FORECAST_URL);
+const fetchWeatherForecast = async (cityName) => {
+  const response = await fetch(WEATHER_FORECAST_URL(cityName));
   const data = await response.json();
   const locationData = data.records.location[0];
   const weatherElements = locationData.weatherElement.reduce((dict, obj) => {
