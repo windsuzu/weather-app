@@ -1,9 +1,11 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import styled from "@emotion/styled";
-import { ReactComponent as CloudyIcon } from "./images/day-cloudy.svg";
 import { ReactComponent as AirFlowIcon } from "./images/airFlow.svg";
 import { ReactComponent as RainIcon } from "./images/rain.svg";
-import { ReactComponent as RedoIcon } from "./images/refresh.svg";
+import { ReactComponent as RefreshIcon } from "./images/refresh.svg";
+import { ReactComponent as LoadingIcon } from "./images/loading.svg";
+import sunriseAndSunsetData from "./sunrise-sunset.json";
+import WeatherIcon from "./WeatherIcon";
 
 const WEATHER_CURRENT_URL =
   "https://opendata.cwb.gov.tw/api/v1/rest/datastore/O-A0003-001?Authorization=CWB-A7DF6610-3FB6-4C69-A6E2-8F99181433FE&locationName=臺北";
@@ -86,7 +88,7 @@ const Rain = styled.div`
   }
 `;
 
-const Redo = styled.div`
+const Refresh = styled.div`
   position: absolute;
   right: 15px;
   bottom: 15px;
@@ -100,11 +102,17 @@ const Redo = styled.div`
     width: 15px;
     height: 15px;
     cursor: pointer;
+    animation: rotate infinite 1.5s linear;
+    animation-duration: ${({ isLoading }) => (isLoading ? "1.5s" : "0s")};
   }
-`;
-
-const Cloudy = styled(CloudyIcon)`
-  flex-basis: 30%;
+  @keyframes rotate {
+    from {
+      transform: rotate(360deg);
+    }
+    to {
+      transform: rotate(0deg);
+    }
+  }
 `;
 
 const beautifyDate = (dateStr) => {
@@ -112,6 +120,32 @@ const beautifyDate = (dateStr) => {
     hour: "numeric",
     minute: "numeric",
   }).format(new Date(dateStr));
+};
+
+const getMoment = (locationName) => {
+  const location = sunriseAndSunsetData.find(
+    (data) => data.locationName === locationName
+  );
+  if (!location) return null;
+  const nowDate = Intl.DateTimeFormat("zh-TW", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  })
+    .format(new Date())
+    .replace("///g", "-");
+  const locationDate =
+    location.time && location.time.find((time) => time.dataTime === nowDate);
+  const sunriseTimestamp = new Date(
+    `${locationDate.dataTime} ${locationDate.sunrise}`
+  ).getTime();
+  const sunsetTimestamp = new Date(
+    `${locationDate.dataTime} ${locationDate.sunset}`
+  ).getTime();
+  const nowTimeStamp = new Date().getTime();
+  return sunriseTimestamp <= nowTimeStamp && nowTimeStamp <= sunsetTimestamp
+    ? "day"
+    : "night";
 };
 
 const WeatherApp = () => {
@@ -125,9 +159,24 @@ const WeatherApp = () => {
     weatherCode: 0,
     rainPossibility: 0,
     comfortability: "",
+    isLoading: true,
   });
 
+  const {
+    observationTime,
+    locationName,
+    temperature,
+    windSpeed,
+    description,
+    weatherCode,
+    rainPossibility,
+    comfortability,
+    isLoading,
+  } = weatherElement;
+
   const fetchData = useCallback(() => {
+    setWeatherElement((prev) => ({ ...prev, isLoading: true }));
+
     (async () => {
       const [weatherCurrent, weatherForecast] = await Promise.all([
         fetchCurrentWeather(),
@@ -136,9 +185,12 @@ const WeatherApp = () => {
       setWeatherElement({
         ...weatherCurrent,
         ...weatherForecast,
+        isLoading: false,
       });
     })();
   }, []);
+
+  const currentMoment = useMemo(() => getMoment(locationName), [locationName]);
 
   useEffect(() => {
     fetchData();
@@ -199,28 +251,31 @@ const WeatherApp = () => {
   return (
     <Container>
       <WeatherCard>
-        <Location>{weatherElement.locationName}</Location>
+        <Location>{locationName}</Location>
         <Description>
-          {weatherElement.description} {weatherElement.comfortability}
+          {description} {comfortability}
         </Description>
         <CurrentWeather>
           <Temperature>
-            {Math.round(weatherElement.temperature)} <Celsius>°C</Celsius>
+            {Math.round(temperature)} <Celsius>°C</Celsius>
           </Temperature>
-          <Cloudy />
+          <WeatherIcon
+            currentWeatherCode={weatherCode}
+            moment={currentMoment || "day"}
+          />
         </CurrentWeather>
         <AirFlow>
           <AirFlowIcon />
-          {weatherElement.windSpeed} m/h
+          {windSpeed} m/h
         </AirFlow>
         <Rain>
           <RainIcon />
-          {Math.round(weatherElement.rainPossibility)} %
+          {Math.round(rainPossibility)} %
         </Rain>
-        <Redo onClick={fetchData}>
-          最後觀測時間：{beautifyDate(weatherElement.observationTime)}
-          <RedoIcon />
-        </Redo>
+        <Refresh onClick={fetchData} isLoading={isLoading}>
+          最後觀測時間：{beautifyDate(observationTime)}
+          {isLoading ? <LoadingIcon /> : <RefreshIcon />}
+        </Refresh>
       </WeatherCard>
     </Container>
   );
